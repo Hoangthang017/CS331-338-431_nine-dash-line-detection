@@ -1,0 +1,11 @@
+RCNN:
+	- selective search -> bounding boxes
+	- alex-nex, vgg-16 tính toán feed-forward các regions -> convolutional features của mỗi region -> SVM để xác định được vật thể nào chứa trong region đó 
+	- Linear regression -> hiệu chỉnh các giá trị (vị trí các đỉnh ) của region
+Faster-RCNN:
+	- mạng huấn luyện sẵn để feed-forward -> tốn nhiều thời gian bởi với mỗi ảnh thuật toán selective search sẽ cho cho ra hàng nhìn region proposals
+	- chỉ feed-forward một lần đối với ảnh gốc, thu được convolutional features của ảnh đó 
+	- dựa vào kích thước cùng vị trí của các region proposals đối với ảnh gốc ta sẽ tính toán được vị trí của region proposal trong conv features
+	- sử dụng giá trị của conv features của RP ta dự đoán được vị trí của bounding box cũng như vật thể trong bounding box là gì 
+
+sử dụng DNN để tính toán các region proposals mục đích giải quyết vấn đề nghẽn input khi đưa các region proposal 
