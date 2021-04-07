@@ -45,3 +45,14 @@
     * Chú ý rằng , RPN hiện tại là 1 mạng fully convolution network nên không cần kích thước đầu vao phải cố định hay ảnh dầu vào của Faster-RCNN phải cố định. Tuy nhiên, nhìn chung ta thường tiến hành resize ảnh về 1 base_width/base_height nhất định mà image ratio vẫn giữ nhiên , hoặc set 2 khoảng giá trị min/max như repo của [TF object detection API](https://github.com/tensorflow/models/blob/master/research/object_detection/samples/configs/faster_rcnn_inception_v2_coco.config#L13-L14) 
     * Vì đầu vào kích thước ảnh không cố định nên kích thước đầu ra của RPN cũng không cố định. Ví dụ với 1 ảnh đầu vào với kích thước WxHx3, với down sampling = 16 thì RPN_classify và RPN_bounding_box lần lượt là 18*(W / 16 )*( H / 16) và 36*(W / 16)*(H / 16)
 ### Anchors 
+* anchor hay còn gọi là các pre-defined boxes, được định nghĩa trước lúc khi huấn luyện mô hình. Anchor trong Faster-RCNN được định nghĩa với 9 anchors ứng với mỗi điểm pixel trên feature map. Chú ý rằng, việc tính toán tổng số lượng anchor là dựa trên kích thước của feature map. Ví dụ : feature map thu được sau khi đưa qua backbone CNN có kích thước là WxHxC (với C là số channel của feature map) thì tổng số lượng anchor là WxHx9 (9 là số lượng anchor ứng với 1 điểm pixle của feature map). Tuy nhiên, kích thước và ratio của anchor thì đều phải tham chiếu ngược lại kích thước của ảnh gốc ban đầu.
+* Các anchor được tạo ra là ứng với từng điểm pixel trên feature map và thông thường được định nghĩa với 3 anchor size và 3 anchor ratio khác nhau .
+* Các anchor này được assign là possive/nagative (object / background) dựa vào diện tích trung lặp hay IoU overlap với ground truth bounding box theo rule sau:
+    * Các anchor có tỉ lệ IoU lớn nhất với ground truth box sẽ được coi là positive 
+    * Các anchor có tỉ lệ IoU >= 0.7 sẽ được coi là positive 
+    * Các anchor có tỉ lệ IoU < 0.3 sẽ được coi là negative (background)
+    * Các anchor nằm trong khoảng 0.3 <= x < 0.7 sẽ được coi là neural (trung tính ) là sẽ không được sử dụng trong quá trình huấn luyện mô hình
+* Việc tạo ra các anchor nhằm mục đích như sau :
+    * Dựa vào IoU để phân biệt các positive và negative anchors 
+    * Dựa vào vị trí của các pre-defined anchor và các ground-truth bounding box (thông qua tỉ lệ IoU), dự đoán vị trí của các region proposal đầu ra
+    
