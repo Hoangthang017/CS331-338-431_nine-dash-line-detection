@@ -55,4 +55,19 @@
 * Việc tạo ra các anchor nhằm mục đích như sau :
     * Dựa vào IoU để phân biệt các positive và negative anchors 
     * Dựa vào vị trí của các pre-defined anchor và các ground-truth bounding box (thông qua tỉ lệ IoU), dự đoán vị trí của các region proposal đầu ra
-    
+    * Dễ thấy số lượng negative anchor là lớn hơn rất nhiều so với positive anchor, nên trong paper có đề cập tới 1 hướng xử lý để thực hiện training mô hình gọi là **image centric**. Trong deep learning, các bạn đã nghe tới khá niệm batch_size là số sample sẽ được xử lý trong 1 step. Trong Faster-RCNN 1 batch_size sẽ chỉ ứng với 1 ảnh. Tuy nhiên, dữ liệu chính cần sử dụng ở đây là chính các pre-define anchor đã được định nghĩa. Vì tổng số lượng anchor là rất nhiều nên với 1 ảnh sẽ chỉ thực hiện lấy k = 256 anchor là chia đề 2 phần (128 positive anchors + 128 negative anchors)
+    * Tuy nhiên,  không phải lúc nào cũng có đủ số lượng positive anchor trong 1 ảnh. vậy nên, hướng xử lý trong paper là nếu không đủ positive anchor thì thay thế bằng ác negative anchor khác
+    * Với các vùng RoI thu được sau RPN sẽ bị overlap lên nhau khá nhiều nên cần 1 cơ chế để filter-out các vùng đó. 1 phướng pháp được đề xuất là NMS (Non-maximum suppresstion). Ý tướng của NMS vô cùng đơn giản:
+        * Ta có 1 tập các vùng RoI thu được gọi là R kèm các confidence score S tương ứng và 1 giá trị overlap threshold N. Đồng thời, khởi tạo 1 list rỗng D
+        * Chọn vùng RoI với confidence score cao nhất và xóa khỏi R, thêm vào D
+        * So sánh vùng RoI mới được thêm vào D với tất cả các vùng RoI đang có trong R qua metric IoU. Nếu giá trị threshold lớn hơn giá trị overlap threshold N được khởi tạo ban đầu thì loại bỏ các vùng RoI đó ra khởi R
+        * Tiếp tục chọn vùng RoI có confidence score cao nhất hiện tại có trong R và thêm vào D
+        * So sánh giá trị IoU của vùng vừa được thêm vào D với các vùng còn lại trong R, nếu > overlap threshold thì loại khỏi R 
+        * Tiếp tục thực hiện như vậy đến khi không còn phần tử nòa trong R
+        * Tuy nhiên, thuật toán NMS ban đầu cũng có những nhược điểm nhất định. Ví dụ như nếu ngưỡng overlap threshold là 0.5. giả dụ có những vùng RoI có overlap IoU = 0.51 nhưng có confidence score rất cao nhưng lại bị loại ra khỏi tập R. Ngược lại, có nhũng vùng RoI thỏa mãn overlap IoU < 0.5 nhưng confidence score không cao, nên không bị loại khỏi R và mô hình chung làm giảm "chất lượng" của model xuống
+    * Tuy nhiên, thuật toán NMS ban đầu cũng có những nhược điểm nhất định. Ví dụ như nếu ngưỡng overlap threshold là 0.5. Giả dụ có những vùng RoI có overlap IoU = 0.51 nhưng có confidence score rất cao nhưng lại bị loại khỏi tập R. Ngược laijm có những vùng RoI thỏa mãn overlap IoU < 0.5 nhưng confidence score không cao, nên không bị loại khỏi R và mô hình chung làm giảm "chất lượng" của model xuống.
+    * Một thuật toán được đề xuất là Soft-NMS giúp cải thiện được việc dùng 1 giá trị overlap threshold fix cừng từ ban đầu. Ý tưởng vô cùng đơn giản : Thay vì loại bỏ ác vùng RoI có overlap threshold cao mà confidence score lớn, ta thực hiện giảm confidence xuống tỉ lệ với giá trị IoU thu được
+### ROI Pooling 
+* RoI Pooling đã được đề cập trong mô hình Fast-RCNN trước đó với mục đích cố định kích thước đầu ra của feature map sau khi thực hiện RoI Pooling. Việc thực hiện RoI Pooling là bắt buộc vì phần cuối của mạng gồm 2 nhánh Fully connected layer yêu cầu input size phải cố định
+* Hãy tưởng tượng ảnh minh họa 4 con mèo dưới gồm các vùng ROI màu đỉ thực tế số lượng vùng là lớn hơn rất nhiều và overlap nhau khá nhiều
+* Như đã nói ở phần trên, tọa độ offset của vùng RoI được xác định tham chiếu theo kích thước ảnh input nên ta cũng có thể trích rút các vùng RoI trên chính feature map. Có thể dễ thấy rằng kích thước của feature map nhỏ hơn 32 lần kích thước của ảnh đầu vào (từ 512 -> 16) nên tọa độ offset của các vùng RoI xét trên feature map (x,y,w,h) cũng sẽ bị giảm xuống 32 lần! Điều này là quan trọng và cần chú ý.
