@@ -1,0 +1,7 @@
+anaconda=2020.11
+conda create -n myenv python=3.7.10
+pip install Django
+pip install numpy
+pip install keras
+pip install tensorflow
+pip install opencv-python
